@@ -36,7 +36,6 @@
             const [weeks, setWeeks] = useState([]);
 
             // ★色設定（ハッシュ値で指定）
-            // 広島市のカレンダーに近い色味を設定
             const colors = {
                 burnable: '#FFFF00',     // 可燃ごみ（黄色）
                 recycle: '#FF69B4',      // リサイクルプラ（ピンク）
@@ -44,19 +43,17 @@
                 resource: '#90EE90',     // 資源ごみ（薄緑）
                 nonburnable: '#FFA500',  // 不燃ごみ（オレンジ）
                 large: '#008000',        // 大型ごみ（緑）
+                none: '#F3F4F6',         // 収集なし（薄いグレー）
             };
 
             // 背景色から文字色（黒or白）を自動判定する関数
             const getTextColor = (hexColor) => {
                 if (!hexColor) return '#000000';
-                // #を取り除く
                 const hex = hexColor.replace('#', '');
                 const r = parseInt(hex.substr(0, 2), 16);
                 const g = parseInt(hex.substr(2, 2), 16);
                 const b = parseInt(hex.substr(4, 2), 16);
-                // 輝度を計算
                 const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-                // 明るければ黒、暗ければ白を返す
                 return luminance > 0.5 ? '#000000' : '#FFFFFF';
             };
 
@@ -100,9 +97,9 @@
                 },
                 NONE: { 
                     id: 'NONE',
-                    fullName: '',
-                    label: '', 
-                    color: null // 透明
+                    fullName: '収集なし',
+                    label: '',
+                    color: colors.none
                 }
             };
 
@@ -154,7 +151,8 @@
                     startDay.setDate(currentDate.getDate() - currentDate.getDay());
 
                     const tempWeeks = [];
-                    for (let w = 0; w < 5; w++) {
+                    // ★生成期間を5週間から60週間（約1年強）に変更
+                    for (let w = 0; w < 60; w++) {
                         const days = [];
                         for (let d = 0; d < 7; d++) {
                             const targetDate = new Date(startDay);
@@ -199,15 +197,14 @@
 
             const threeDaysData = getThreeDaysData();
 
-            // ラベルのスタイルを生成するヘルパー関数
             const getLabelStyle = (color) => ({
                 backgroundColor: color,
                 color: getTextColor(color),
             });
 
             return (
-                <div className="min-h-screen bg-white font-sans text-slate-800">
-                    <div className="px-4 py-8 max-w-md mx-auto">
+                <div className="min-h-screen bg-white font-sans text-slate-800 flex flex-col">
+                    <div className="px-4 pt-8 pb-4 max-w-md mx-auto w-full">
                         
                         {/* 直近3日間のリスト表示 */}
                         <div className="mb-6 pb-4 border-b border-slate-200">
@@ -218,29 +215,30 @@
                                             {data.dateString}
                                         </span>
                                         <div className="flex flex-wrap gap-2">
-                                            {data.garbageList[0].id === 'NONE' ? (
-                                                <span className="text-lg font-bold text-slate-400">収集なし</span>
-                                            ) : (
-                                                data.garbageList.map((g, gIdx) => (
-                                                    <span 
-                                                        key={gIdx} 
-                                                        className="px-3 py-1 text-sm font-bold rounded-md shadow-sm"
-                                                        style={getLabelStyle(g.color)}
-                                                    >
-                                                        {g.fullName}
-                                                    </span>
-                                                ))
-                                            )}
+                                            {data.garbageList.map((g, gIdx) => (
+                                                <span 
+                                                    key={gIdx} 
+                                                    className="px-3 py-1 text-sm font-bold rounded-md shadow-sm border border-slate-100"
+                                                    style={getLabelStyle(g.color)}
+                                                >
+                                                    {g.fullName}
+                                                </span>
+                                            ))}
                                         </div>
                                     </div>
                                 ))}
                             </div>
                         </div>
 
-                        {/* カレンダー */}
+                        {/* カレンダーエリア */}
                         <div className="border-t border-l border-slate-200">
-                            {/* 曜日ヘッダー */}
-                            <div className="grid grid-cols-7 text-xs font-bold text-slate-500 text-center bg-slate-50">
+                            {/* 曜日ヘッダー 
+                                sticky: スクロール追従
+                                top-0: 画面上端に固定
+                                z-10: コンテンツの上に表示
+                                bg-slate-50: 背景色が透けないように指定
+                            */}
+                            <div className="sticky top-0 z-10 grid grid-cols-7 text-xs font-bold text-slate-500 text-center bg-slate-50 shadow-sm">
                                 <div className="text-red-500 py-2 border-r border-b border-slate-200">日</div>
                                 <div className="py-2 border-r border-b border-slate-200">月</div>
                                 <div className="py-2 border-r border-b border-slate-200">火</div>
@@ -262,11 +260,15 @@
                                                 ${day.isPast ? 'opacity-40 grayscale' : ''}
                                             `}
                                         >
+                                            {/* 日付表示：ついたち（1日）の場合は月も表示する */}
                                             <span className={`text-sm font-bold mb-1.5 ${
                                                 dayIdx === 0 ? 'text-red-500' : 
                                                 dayIdx === 6 ? 'text-blue-500' : 'text-slate-700'
                                             }`}>
-                                                {day.date.getDate()}
+                                                {day.date.getDate() === 1 
+                                                    ? `${day.date.getMonth() + 1}/${day.date.getDate()}` 
+                                                    : day.date.getDate()
+                                                }
                                             </span>
                                             
                                             <div className="flex flex-col gap-1 w-full">
