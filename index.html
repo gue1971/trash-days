@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ゴミ出しカレンダー（矢賀・東山）</title>
+    
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- Babel (for JSX) -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <style>
+        /* iOSでのタップハイライトを無効化してアプリっぽく */
+        * {
+            -webkit-tap-highlight-color: transparent;
+        }
+        body {
+            overscroll-behavior-y: none; /* バウンススクロール防止 */
+        }
+    </style>
+</head>
+<body class="bg-white text-slate-800 antialiased selection:bg-slate-100">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        const App = () => {
+            const [currentDate] = useState(new Date());
+            const [weeks, setWeeks] = useState([]);
+
+            // ★色設定（PDF準拠・白背景スタイル用）
+            const colors = {
+                burnable: 'red',        // 可燃ごみ（赤）
+                recycle: 'green',       // リサイクルプラ（緑）
+                other: 'orange',        // その他プラ（オレンジ）
+                resource: 'blue',       // 資源ごみ（青）
+                nonburnable: 'slate',   // 不燃ごみ（グレー）
+                large: 'stone',         // 大型ごみ（茶色・グレー）
+            };
+
+            // ゴミの種類定義
+            // fullName: ヘッダー用（省略なし）
+            // label: カレンダー用（短縮・改行あり）
+            const garbageTypes = {
+                BURNABLE: { 
+                    id: 'BURNABLE',
+                    fullName: '可燃ごみ',
+                    label: '可燃\nごみ', 
+                    style: `bg-white border-2 border-${colors.burnable}-500 text-${colors.burnable}-600`,
+                    headerColor: `text-${colors.burnable}-600`
+                },
+                RECYCLE_PLASTIC: { 
+                    id: 'RECYCLE_PLASTIC',
+                    fullName: 'リサイクルプラ',
+                    label: 'リサイ\nプラ', 
+                    style: `bg-white border-2 border-${colors.recycle}-500 text-${colors.recycle}-600`,
+                    headerColor: `text-${colors.recycle}-600`
+                },
+                OTHER_PLASTIC: { 
+                    id: 'OTHER_PLASTIC',
+                    fullName: 'その他プラ',
+                    label: 'その他\nプラ', 
+                    style: `bg-white border-2 border-${colors.other}-500 text-${colors.other}-600`,
+                    headerColor: `text-${colors.other}-600`
+                },
+                RECYCLABLE_HAZARDOUS: { 
+                    id: 'RECYCLABLE_HAZARDOUS',
+                    fullName: '資源ごみ・有害ごみ',
+                    label: '資源\nごみ', 
+                    style: `bg-white border-2 border-${colors.resource}-500 text-${colors.resource}-600`,
+                    headerColor: `text-${colors.resource}-600`
+                },
+                NON_BURNABLE: { 
+                    id: 'NON_BURNABLE',
+                    fullName: '不燃ごみ',
+                    label: '不燃\nごみ', 
+                    style: `bg-white border-2 border-${colors.nonburnable}-500 text-${colors.nonburnable}-600`,
+                    headerColor: `text-${colors.nonburnable}-600`
+                },
+                LARGE_WASTE: { 
+                    id: 'LARGE_WASTE',
+                    fullName: '大型ごみ',
+                    label: '大型\nごみ', 
+                    style: `bg-white border-2 border-${colors.large}-500 text-${colors.large}-600`,
+                    headerColor: `text-${colors.large}-600`
+                },
+                NONE: { 
+                    id: 'NONE',
+                    fullName: '',
+                    label: '', 
+                    style: 'bg-transparent border-transparent',
+                    headerColor: 'text-slate-300'
+                }
+            };
+
+            // ★例外リスト
+            const exceptionDates = {
+                // 8月6日は休み
+                '2025-08-06': ['NONE'], 
+                // 8月5日に2つある場合（例：その他プラ ＋ 大型ごみ）
+                '2025-08-05': ['OTHER_PLASTIC', 'LARGE_WASTE'],
+                
+                // 年末年始
+                '2025-12-31': ['NONE'],
+                '2026-01-01': ['NONE'],
+                '2026-01-02': ['NONE'],
+                '2026-01-03': ['NONE'],
+            };
+
+            const getNthDay = (date) => Math.floor((date.getDate() - 1) / 7) + 1;
+
+            const formatDateKey = (date) => {
+                const y = date.getFullYear();
+                const m = ('0' + (date.getMonth() + 1)).slice(-2);
+                const d = ('0' + date.getDate()).slice(-2);
+                return `${y}-${m}-${d}`;
+            };
+
+            // 戻り値を「配列」に変更
+            const getGarbageList = (date) => {
+                const dateKey = formatDateKey(date);
+                
+                if (exceptionDates[dateKey]) {
+                    return exceptionDates[dateKey].map(key => garbageTypes[key]);
+                }
+
+                const dayOfWeek = date.getDay();
+                const nth = getNthDay(date);
+
+                // 月・木：可燃ごみ
+                if (dayOfWeek === 1 || dayOfWeek === 4) return [garbageTypes.BURNABLE];
+                // 金：リサイクルプラ
+                if (dayOfWeek === 5) return [garbageTypes.RECYCLE_PLASTIC];
+                
+                // 火曜日
+                if (dayOfWeek === 2) {
+                    if (nth === 1 || nth === 3 || nth === 5) return [garbageTypes.OTHER_PLASTIC];
+                    if (nth === 2 || nth === 4) return [garbageTypes.RECYCLABLE_HAZARDOUS];
+                }
+                
+                // 水曜日
+                if (dayOfWeek === 3) {
+                    if (nth === 1 || nth === 3 || nth === 5) return [garbageTypes.LARGE_WASTE];
+                    if (nth === 2 || nth === 4) return [garbageTypes.NON_BURNABLE];
+                }
+
+                return [garbageTypes.NONE];
+            };
+
+            useEffect(() => {
+                const generateCalendar = () => {
+                    const startDay = new Date(currentDate);
+                    startDay.setDate(currentDate.getDate() - currentDate.getDay());
+
+                    const tempWeeks = [];
+                    for (let w = 0; w < 5; w++) {
+                        const days = [];
+                        for (let d = 0; d < 7; d++) {
+                            const targetDate = new Date(startDay);
+                            targetDate.setDate(startDay.getDate() + (w * 7) + d);
+                            
+                            const isToday = targetDate.toDateString() === currentDate.toDateString();
+                            const isPast = targetDate < new Date(new Date(currentDate).setHours(0,0,0,0));
+
+                            days.push({
+                                date: targetDate,
+                                isToday,
+                                isPast,
+                                garbageList: getGarbageList(targetDate)
+                            });
+                        }
+                        tempWeeks.push(days);
+                    }
+                    setWeeks(tempWeeks);
+                };
+
+                generateCalendar();
+            }, [currentDate]);
+
+            const todayGarbageList = getGarbageList(currentDate);
+
+            // ヘッダー用日付フォーマット：M月D日（曜）
+            const getHeaderDateString = (date) => {
+                const m = date.getMonth() + 1;
+                const d = date.getDate();
+                const w = ['日', '月', '火', '水', '木', '金', '土'][date.getDay()];
+                return `${m}月${d}日（${w}）`;
+            };
+
+            return (
+                <div className="min-h-screen bg-white font-sans text-slate-800">
+                    <div className="px-4 py-8 max-w-md mx-auto">
+                        
+                        {/* 今日の表示（1行・横並び） */}
+                        <div className="mb-6 pb-4 border-b-2 border-slate-100">
+                            <h1 className="text-xl font-bold tracking-tight text-slate-900 flex items-baseline gap-3">
+                                <span className="whitespace-nowrap">{getHeaderDateString(currentDate)}</span>
+                                <div className="flex flex-wrap gap-2">
+                                    {todayGarbageList.map((g, idx) => (
+                                        <span key={idx} className={`text-xl font-bold ${g.fullName ? g.headerColor : 'text-slate-400'}`}>
+                                            {/* ヘッダーでは fullName を使用、なければ「収集なし」 */}
+                                            {g.fullName ? g.fullName : (idx === 0 ? '収集なし' : '')}
+                                        </span>
+                                    ))}
+                                </div>
+                            </h1>
+                        </div>
+
+                        {/* カレンダー */}
+                        <div className="space-y-1">
+                            {/* 曜日ヘッダー */}
+                            <div className="grid grid-cols-7 mb-2 text-xs font-bold text-slate-400 text-center">
+                                <div className="text-red-500">日</div>
+                                <div>月</div>
+                                <div>火</div>
+                                <div>水</div>
+                                <div>木</div>
+                                <div>金</div>
+                                <div className="text-blue-500">土</div>
+                            </div>
+
+                            {/* 週ごとの表示 */}
+                            {weeks.map((week, weekIdx) => (
+                                <div key={weekIdx} className="grid grid-cols-7 gap-1">
+                                    {week.map((day, dayIdx) => (
+                                        <div 
+                                            key={dayIdx} 
+                                            className={`
+                                                min-h-[85px] p-1 rounded flex flex-col items-center justify-start
+                                                ${day.isToday ? 'bg-slate-50 ring-1 ring-slate-300' : 'bg-white'}
+                                                ${day.isPast ? 'opacity-30 grayscale' : ''}
+                                            `}
+                                        >
+                                            <span className={`text-sm font-bold mb-1.5 ${
+                                                dayIdx === 0 ? 'text-red-500' : 
+                                                dayIdx === 6 ? 'text-blue-500' : 'text-slate-700'
+                                            }`}>
+                                                {day.date.getDate()}
+                                            </span>
+                                            
+                                            {/* 複数表示に対応（カレンダー内は短縮形の label を使用） */}
+                                            <div className="flex flex-col gap-1 w-full">
+                                                {day.garbageList.map((g, gIdx) => (
+                                                    g.label && (
+                                                        <div key={gIdx} className={`
+                                                            w-full py-1.5 px-0.5 text-[10px] font-bold text-center leading-tight rounded-sm shadow-sm
+                                                            ${g.style}
+                                                        `}>
+                                                            {g.label.split('\n').map((line, i) => (
+                                                                <div key={i}>{line}</div>
+                                                            ))}
+                                                        </div>
+                                                    )
+                                                ))}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
