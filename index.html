@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ゴミ出しカレンダー（矢賀・東山）</title>
+    <title>Trash Days</title>
     
     <!-- React & ReactDOM -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
@@ -16,13 +16,8 @@
     <script src="https://cdn.tailwindcss.com"></script>
 
     <style>
-        /* iOSでのタップハイライトを無効化してアプリっぽく */
-        * {
-            -webkit-tap-highlight-color: transparent;
-        }
-        body {
-            overscroll-behavior-y: none; /* バウンススクロール防止 */
-        }
+        * { -webkit-tap-highlight-color: transparent; }
+        body { overscroll-behavior-y: none; }
     </style>
 </head>
 <body class="bg-white text-slate-800 antialiased selection:bg-slate-100">
@@ -35,18 +30,16 @@
             const [currentDate] = useState(new Date());
             const [weeks, setWeeks] = useState([]);
 
-            // ★色設定（ハッシュ値で指定）
             const colors = {
-                burnable: '#FFFF00',     // 可燃ごみ（黄色）
-                recycle: '#FF69B4',      // リサイクルプラ（ピンク）
-                other: '#00BFFF',        // その他プラ（青）
-                resource: '#90EE90',     // 資源ごみ（薄緑）
-                nonburnable: '#FFA500',  // 不燃ごみ（オレンジ）
-                large: '#008000',        // 大型ごみ（緑）
-                none: '#F3F4F6',         // 収集なし（薄いグレー）
+                burnable: '#FFFF00',
+                recycle: '#FF69B4',
+                other: '#00BFFF',
+                resource: '#90EE90',
+                nonburnable: '#FFA500',
+                large: '#008000',
+                none: '#F3F4F6',
             };
 
-            // 背景色から文字色（黒or白）を自動判定する関数
             const getTextColor = (hexColor) => {
                 if (!hexColor) return '#000000';
                 const hex = hexColor.replace('#', '');
@@ -57,53 +50,16 @@
                 return luminance > 0.5 ? '#000000' : '#FFFFFF';
             };
 
-            // ゴミの種類定義
             const garbageTypes = {
-                BURNABLE: { 
-                    id: 'BURNABLE',
-                    fullName: '可燃ごみ',
-                    label: '可燃\nごみ',
-                    color: colors.burnable
-                },
-                RECYCLE_PLASTIC: { 
-                    id: 'RECYCLE_PLASTIC',
-                    fullName: 'リサイクルプラ',
-                    label: 'リサイ\nプラ', 
-                    color: colors.recycle
-                },
-                OTHER_PLASTIC: { 
-                    id: 'OTHER_PLASTIC',
-                    fullName: 'その他プラ',
-                    label: 'その他\nプラ', 
-                    color: colors.other
-                },
-                RECYCLABLE_HAZARDOUS: { 
-                    id: 'RECYCLABLE_HAZARDOUS',
-                    fullName: '資源ごみ・有害ごみ',
-                    label: '資源\nごみ', 
-                    color: colors.resource
-                },
-                NON_BURNABLE: { 
-                    id: 'NON_BURNABLE',
-                    fullName: '不燃ごみ',
-                    label: '不燃\nごみ', 
-                    color: colors.nonburnable
-                },
-                LARGE_WASTE: { 
-                    id: 'LARGE_WASTE',
-                    fullName: '大型ごみ',
-                    label: '大型\nごみ', 
-                    color: colors.large
-                },
-                NONE: { 
-                    id: 'NONE',
-                    fullName: '収集なし',
-                    label: '',
-                    color: colors.none
-                }
+                BURNABLE: { id: 'BURNABLE', fullName: '可燃ごみ', label: '可燃\nごみ', color: colors.burnable },
+                RECYCLE_PLASTIC: { id: 'RECYCLE_PLASTIC', fullName: 'リサイクルプラ', label: 'リサイ\nプラ', color: colors.recycle },
+                OTHER_PLASTIC: { id: 'OTHER_PLASTIC', fullName: 'その他プラ', label: 'その他\nプラ', color: colors.other },
+                RECYCLABLE_HAZARDOUS: { id: 'RECYCLABLE_HAZARDOUS', fullName: '資源ごみ・有害ごみ', label: '資源\nごみ', color: colors.resource },
+                NON_BURNABLE: { id: 'NON_BURNABLE', fullName: '不燃ごみ', label: '不燃\nごみ', color: colors.nonburnable },
+                LARGE_WASTE: { id: 'LARGE_WASTE', fullName: '大型ごみ', label: '大型\nごみ', color: colors.large },
+                NONE: { id: 'NONE', fullName: '収集なし', label: '', color: colors.none }
             };
 
-            // ★例外リスト
             const exceptionDates = {
                 '2025-08-06': ['NONE'], 
                 '2025-08-05': ['OTHER_PLASTIC', 'LARGE_WASTE'],
@@ -111,7 +67,6 @@
                 '2026-01-01': ['NONE'],
                 '2026-01-02': ['NONE'],
                 '2026-01-03': ['NONE'],
-                // 今年度（2026年）の例外追加分
                 '2026-02-23': ['NONE'],
                 '2026-03-20': ['NONE'],
                 '2026-03-31': ['NONE'],
@@ -128,10 +83,8 @@
 
             const getGarbageList = (date) => {
                 const dateKey = formatDateKey(date);
-                if (exceptionDates[dateKey]) {
-                    return exceptionDates[dateKey].map(key => garbageTypes[key]);
-                }
-
+                if (exceptionDates[dateKey]) return exceptionDates[dateKey].map(key => garbageTypes[key]);
+                
                 const dayOfWeek = date.getDay();
                 const nth = getNthDay(date);
 
@@ -145,7 +98,6 @@
                     if (nth === 1 || nth === 3 || nth === 5) return [garbageTypes.LARGE_WASTE];
                     if (nth === 2 || nth === 4) return [garbageTypes.NON_BURNABLE];
                 }
-
                 return [garbageTypes.NONE];
             };
 
@@ -153,22 +105,16 @@
                 const generateCalendar = () => {
                     const startDay = new Date(currentDate);
                     startDay.setDate(currentDate.getDate() - currentDate.getDay());
-
                     const tempWeeks = [];
-                    // ★生成期間を5週間から60週間（約1年強）に変更
                     for (let w = 0; w < 60; w++) {
                         const days = [];
                         for (let d = 0; d < 7; d++) {
                             const targetDate = new Date(startDay);
                             targetDate.setDate(startDay.getDate() + (w * 7) + d);
-                            
-                            const isToday = targetDate.toDateString() === currentDate.toDateString();
-                            const isPast = targetDate < new Date(new Date(currentDate).setHours(0,0,0,0));
-
                             days.push({
                                 date: targetDate,
-                                isToday,
-                                isPast,
+                                isToday: targetDate.toDateString() === currentDate.toDateString(),
+                                isPast: targetDate < new Date(new Date(currentDate).setHours(0,0,0,0)),
                                 garbageList: getGarbageList(targetDate)
                             });
                         }
@@ -176,7 +122,6 @@
                     }
                     setWeeks(tempWeeks);
                 };
-
                 generateCalendar();
             }, [currentDate]);
 
@@ -187,30 +132,35 @@
                 return `${m}月${d}日（${w}）`;
             };
 
-            const getThreeDaysData = () => {
-                return [0, 1, 2].map(offset => {
-                    const d = new Date(currentDate);
-                    d.setDate(currentDate.getDate() + offset);
-                    return {
-                        date: d,
-                        dateString: getHeaderDateString(d),
-                        garbageList: getGarbageList(d)
-                    };
-                });
-            };
-
-            const threeDaysData = getThreeDaysData();
+            const threeDaysData = [0, 1, 2].map(offset => {
+                const d = new Date(currentDate);
+                d.setDate(currentDate.getDate() + offset);
+                return {
+                    date: d,
+                    dateString: getHeaderDateString(d),
+                    garbageList: getGarbageList(d)
+                };
+            });
 
             const getLabelStyle = (color) => ({
                 backgroundColor: color,
                 color: getTextColor(color),
             });
 
+            // 背景色を決定する関数
+            const getBackgroundColorClass = (date, isToday) => {
+                if (isToday) return 'bg-yellow-100'; // 今日は少し濃い黄色
+                const month = date.getMonth() + 1;
+                // 偶数月は Stone-100 (温かみのある薄いグレー/アイボリー系)
+                // 奇数月は White
+                return month % 2 === 0 ? 'bg-stone-100' : 'bg-white';
+            };
+
             return (
                 <div className="min-h-screen bg-white font-sans text-slate-800 flex flex-col">
                     <div className="px-4 pt-8 pb-4 max-w-md mx-auto w-full">
                         
-                        {/* 直近3日間のリスト表示 */}
+                        {/* 直近3日間のリスト */}
                         <div className="mb-6 pb-4 border-b border-slate-200">
                             <div className="flex flex-col gap-3">
                                 {threeDaysData.map((data, idx) => (
@@ -234,64 +184,70 @@
                             </div>
                         </div>
 
-                        {/* カレンダーエリア */}
-                        <div className="border-t border-l border-slate-200">
-                            {/* 曜日ヘッダー 
-                                sticky: スクロール追従
-                                top-0: 画面上端に固定
-                                z-10: コンテンツの上に表示
-                                bg-slate-50: 背景色が透けないように指定
-                            */}
-                            <div className="sticky top-0 z-10 grid grid-cols-7 text-xs font-bold text-slate-500 text-center bg-slate-50 shadow-sm">
-                                <div className="text-red-500 py-2 border-r border-b border-slate-200">日</div>
-                                <div className="py-2 border-r border-b border-slate-200">月</div>
-                                <div className="py-2 border-r border-b border-slate-200">火</div>
-                                <div className="py-2 border-r border-b border-slate-200">水</div>
-                                <div className="py-2 border-r border-b border-slate-200">木</div>
-                                <div className="py-2 border-r border-b border-slate-200">金</div>
-                                <div className="text-blue-500 py-2 border-r border-b border-slate-200">土</div>
+                        {/* カレンダー */}
+                        <div className="relative border-l border-t border-slate-200">
+                            <div className="sticky top-0 z-20 grid grid-cols-7 text-xs font-bold text-slate-500 text-center bg-slate-50 shadow-sm border-b border-slate-200">
+                                <div className="text-red-500 py-2 border-r border-slate-200">日</div>
+                                <div className="py-2 border-r border-slate-200">月</div>
+                                <div className="py-2 border-r border-slate-200">火</div>
+                                <div className="py-2 border-r border-slate-200">水</div>
+                                <div className="py-2 border-r border-slate-200">木</div>
+                                <div className="py-2 border-r border-slate-200">金</div>
+                                <div className="text-blue-500 py-2 border-r border-slate-200">土</div>
                             </div>
 
                             {/* 週ごとの表示 */}
                             {weeks.map((week, weekIdx) => (
                                 <div key={weekIdx} className="grid grid-cols-7">
-                                    {week.map((day, dayIdx) => (
-                                        <div 
-                                            key={dayIdx} 
-                                            className={`
-                                                min-h-[85px] p-1 border-r border-b border-slate-200 flex flex-col items-center justify-start
-                                                ${day.isToday ? 'bg-yellow-50' : 'bg-white'}
-                                                ${day.isPast ? 'opacity-40 grayscale' : ''}
-                                            `}
-                                        >
-                                            {/* 日付表示：ついたち（1日）の場合は月も表示する */}
-                                            <span className={`text-sm font-bold mb-1.5 ${
-                                                dayIdx === 0 ? 'text-red-500' : 
-                                                dayIdx === 6 ? 'text-blue-500' : 'text-slate-700'
-                                            }`}>
-                                                {day.date.getDate() === 1 
-                                                    ? `${day.date.getMonth() + 1}/${day.date.getDate()}` 
-                                                    : day.date.getDate()
-                                                }
-                                            </span>
-                                            
-                                            <div className="flex flex-col gap-1 w-full">
-                                                {day.garbageList.map((g, gIdx) => (
-                                                    g.label && (
-                                                        <div 
-                                                            key={gIdx} 
-                                                            className="w-full py-1 px-0.5 text-[10px] font-bold text-center leading-tight rounded-md shadow-sm"
-                                                            style={getLabelStyle(g.color)}
-                                                        >
-                                                            {g.label.split('\n').map((line, i) => (
-                                                                <div key={i}>{line}</div>
-                                                            ))}
-                                                        </div>
-                                                    )
-                                                ))}
+                                    {week.map((day, dayIdx) => {
+                                        const isFirstDay = day.date.getDate() === 1;
+                                        // 背景色クラスを取得
+                                        const bgClass = getBackgroundColorClass(day.date, day.isToday);
+                                        
+                                        return (
+                                            <div 
+                                                key={dayIdx} 
+                                                className={`
+                                                    min-h-[85px] p-1 flex flex-col items-center justify-start relative border-r border-b border-slate-200
+                                                    ${bgClass}
+                                                    ${day.isPast ? 'opacity-40 grayscale' : ''}
+                                                `}
+                                            >
+                                                {/* 日付表示：高さ固定のコンテナで囲ってズレを防止 */}
+                                                <div className="h-6 mb-1 flex items-center justify-center w-full">
+                                                    {isFirstDay ? (
+                                                        /* 1日のバッジ：w-fullで横幅いっぱいに広げ、flexでセンタリング */
+                                                        <span className="w-full flex items-center justify-center bg-blue-900 text-white text-xs font-bold py-0.5 rounded-md shadow-sm leading-none">
+                                                            {day.date.getMonth() + 1}/{day.date.getDate()}
+                                                        </span>
+                                                    ) : (
+                                                        <span className={`text-sm font-bold leading-none ${
+                                                            dayIdx === 0 ? 'text-red-500' : 
+                                                            dayIdx === 6 ? 'text-blue-500' : 'text-slate-700'
+                                                        }`}>
+                                                            {day.date.getDate()}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                
+                                                <div className="flex flex-col gap-1 w-full">
+                                                    {day.garbageList.map((g, gIdx) => (
+                                                        g.label && (
+                                                            <div 
+                                                                key={gIdx} 
+                                                                className="w-full py-1 px-0.5 text-[10px] font-bold text-center leading-tight rounded-md shadow-sm"
+                                                                style={getLabelStyle(g.color)}
+                                                            >
+                                                                {g.label.split('\n').map((line, i) => (
+                                                                    <div key={i}>{line}</div>
+                                                                ))}
+                                                            </div>
+                                                        )
+                                                    ))}
+                                                </div>
                                             </div>
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             ))}
                         </div>
