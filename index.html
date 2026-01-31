@@ -35,79 +35,81 @@
             const [currentDate] = useState(new Date());
             const [weeks, setWeeks] = useState([]);
 
-            // ★色設定（PDF準拠・白背景スタイル用）
+            // ★色設定（ハッシュ値で指定）
+            // 広島市のカレンダーに近い色味を設定
             const colors = {
-                burnable: 'red',        // 可燃ごみ（赤）
-                recycle: 'green',       // リサイクルプラ（緑）
-                other: 'orange',        // その他プラ（オレンジ）
-                resource: 'blue',       // 資源ごみ（青）
-                nonburnable: 'slate',   // 不燃ごみ（グレー）
-                large: 'stone',         // 大型ごみ（茶色・グレー）
+                burnable: '#FFFF00',     // 可燃ごみ（黄色）
+                recycle: '#FF69B4',      // リサイクルプラ（ピンク）
+                other: '#00BFFF',        // その他プラ（青）
+                resource: '#90EE90',     // 資源ごみ（薄緑）
+                nonburnable: '#FFA500',  // 不燃ごみ（オレンジ）
+                large: '#008000',        // 大型ごみ（緑）
+            };
+
+            // 背景色から文字色（黒or白）を自動判定する関数
+            const getTextColor = (hexColor) => {
+                if (!hexColor) return '#000000';
+                // #を取り除く
+                const hex = hexColor.replace('#', '');
+                const r = parseInt(hex.substr(0, 2), 16);
+                const g = parseInt(hex.substr(2, 2), 16);
+                const b = parseInt(hex.substr(4, 2), 16);
+                // 輝度を計算
+                const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+                // 明るければ黒、暗ければ白を返す
+                return luminance > 0.5 ? '#000000' : '#FFFFFF';
             };
 
             // ゴミの種類定義
-            // fullName: ヘッダー用（省略なし）
-            // label: カレンダー用（短縮・改行あり）
             const garbageTypes = {
                 BURNABLE: { 
                     id: 'BURNABLE',
                     fullName: '可燃ごみ',
-                    label: '可燃\nごみ', 
-                    style: `bg-white border-2 border-${colors.burnable}-500 text-${colors.burnable}-600`,
-                    headerColor: `text-${colors.burnable}-600`
+                    label: '可燃\nごみ',
+                    color: colors.burnable
                 },
                 RECYCLE_PLASTIC: { 
                     id: 'RECYCLE_PLASTIC',
                     fullName: 'リサイクルプラ',
                     label: 'リサイ\nプラ', 
-                    style: `bg-white border-2 border-${colors.recycle}-500 text-${colors.recycle}-600`,
-                    headerColor: `text-${colors.recycle}-600`
+                    color: colors.recycle
                 },
                 OTHER_PLASTIC: { 
                     id: 'OTHER_PLASTIC',
                     fullName: 'その他プラ',
                     label: 'その他\nプラ', 
-                    style: `bg-white border-2 border-${colors.other}-500 text-${colors.other}-600`,
-                    headerColor: `text-${colors.other}-600`
+                    color: colors.other
                 },
                 RECYCLABLE_HAZARDOUS: { 
                     id: 'RECYCLABLE_HAZARDOUS',
                     fullName: '資源ごみ・有害ごみ',
                     label: '資源\nごみ', 
-                    style: `bg-white border-2 border-${colors.resource}-500 text-${colors.resource}-600`,
-                    headerColor: `text-${colors.resource}-600`
+                    color: colors.resource
                 },
                 NON_BURNABLE: { 
                     id: 'NON_BURNABLE',
                     fullName: '不燃ごみ',
                     label: '不燃\nごみ', 
-                    style: `bg-white border-2 border-${colors.nonburnable}-500 text-${colors.nonburnable}-600`,
-                    headerColor: `text-${colors.nonburnable}-600`
+                    color: colors.nonburnable
                 },
                 LARGE_WASTE: { 
                     id: 'LARGE_WASTE',
                     fullName: '大型ごみ',
                     label: '大型\nごみ', 
-                    style: `bg-white border-2 border-${colors.large}-500 text-${colors.large}-600`,
-                    headerColor: `text-${colors.large}-600`
+                    color: colors.large
                 },
                 NONE: { 
                     id: 'NONE',
                     fullName: '',
                     label: '', 
-                    style: 'bg-transparent border-transparent',
-                    headerColor: 'text-slate-300'
+                    color: null // 透明
                 }
             };
 
             // ★例外リスト
             const exceptionDates = {
-                // 8月6日は休み
                 '2025-08-06': ['NONE'], 
-                // 8月5日に2つある場合（例：その他プラ ＋ 大型ごみ）
                 '2025-08-05': ['OTHER_PLASTIC', 'LARGE_WASTE'],
-                
-                // 年末年始
                 '2025-12-31': ['NONE'],
                 '2026-01-01': ['NONE'],
                 '2026-01-02': ['NONE'],
@@ -123,10 +125,8 @@
                 return `${y}-${m}-${d}`;
             };
 
-            // 戻り値を「配列」に変更
             const getGarbageList = (date) => {
                 const dateKey = formatDateKey(date);
-                
                 if (exceptionDates[dateKey]) {
                     return exceptionDates[dateKey].map(key => garbageTypes[key]);
                 }
@@ -134,18 +134,12 @@
                 const dayOfWeek = date.getDay();
                 const nth = getNthDay(date);
 
-                // 月・木：可燃ごみ
                 if (dayOfWeek === 1 || dayOfWeek === 4) return [garbageTypes.BURNABLE];
-                // 金：リサイクルプラ
                 if (dayOfWeek === 5) return [garbageTypes.RECYCLE_PLASTIC];
-                
-                // 火曜日
                 if (dayOfWeek === 2) {
                     if (nth === 1 || nth === 3 || nth === 5) return [garbageTypes.OTHER_PLASTIC];
                     if (nth === 2 || nth === 4) return [garbageTypes.RECYCLABLE_HAZARDOUS];
                 }
-                
-                // 水曜日
                 if (dayOfWeek === 3) {
                     if (nth === 1 || nth === 3 || nth === 5) return [garbageTypes.LARGE_WASTE];
                     if (nth === 2 || nth === 4) return [garbageTypes.NON_BURNABLE];
@@ -184,9 +178,6 @@
                 generateCalendar();
             }, [currentDate]);
 
-            const todayGarbageList = getGarbageList(currentDate);
-
-            // ヘッダー用日付フォーマット：M月D日（曜）
             const getHeaderDateString = (date) => {
                 const m = date.getMonth() + 1;
                 const d = date.getDate();
@@ -194,48 +185,81 @@
                 return `${m}月${d}日（${w}）`;
             };
 
+            const getThreeDaysData = () => {
+                return [0, 1, 2].map(offset => {
+                    const d = new Date(currentDate);
+                    d.setDate(currentDate.getDate() + offset);
+                    return {
+                        date: d,
+                        dateString: getHeaderDateString(d),
+                        garbageList: getGarbageList(d)
+                    };
+                });
+            };
+
+            const threeDaysData = getThreeDaysData();
+
+            // ラベルのスタイルを生成するヘルパー関数
+            const getLabelStyle = (color) => ({
+                backgroundColor: color,
+                color: getTextColor(color),
+            });
+
             return (
                 <div className="min-h-screen bg-white font-sans text-slate-800">
                     <div className="px-4 py-8 max-w-md mx-auto">
                         
-                        {/* 今日の表示（1行・横並び） */}
-                        <div className="mb-6 pb-4 border-b-2 border-slate-100">
-                            <h1 className="text-xl font-bold tracking-tight text-slate-900 flex items-baseline gap-3">
-                                <span className="whitespace-nowrap">{getHeaderDateString(currentDate)}</span>
-                                <div className="flex flex-wrap gap-2">
-                                    {todayGarbageList.map((g, idx) => (
-                                        <span key={idx} className={`text-xl font-bold ${g.fullName ? g.headerColor : 'text-slate-400'}`}>
-                                            {/* ヘッダーでは fullName を使用、なければ「収集なし」 */}
-                                            {g.fullName ? g.fullName : (idx === 0 ? '収集なし' : '')}
+                        {/* 直近3日間のリスト表示 */}
+                        <div className="mb-6 pb-4 border-b border-slate-200">
+                            <div className="flex flex-col gap-3">
+                                {threeDaysData.map((data, idx) => (
+                                    <div key={idx} className="flex items-center gap-4 min-h-[2rem]">
+                                        <span className={`text-lg font-bold min-w-[8rem] whitespace-nowrap ${idx === 0 ? 'text-slate-900' : 'text-slate-500'}`}>
+                                            {data.dateString}
                                         </span>
-                                    ))}
-                                </div>
-                            </h1>
+                                        <div className="flex flex-wrap gap-2">
+                                            {data.garbageList[0].id === 'NONE' ? (
+                                                <span className="text-lg font-bold text-slate-400">収集なし</span>
+                                            ) : (
+                                                data.garbageList.map((g, gIdx) => (
+                                                    <span 
+                                                        key={gIdx} 
+                                                        className="px-3 py-1 text-sm font-bold rounded-md shadow-sm"
+                                                        style={getLabelStyle(g.color)}
+                                                    >
+                                                        {g.fullName}
+                                                    </span>
+                                                ))
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
 
                         {/* カレンダー */}
-                        <div className="space-y-1">
+                        <div className="border-t border-l border-slate-200">
                             {/* 曜日ヘッダー */}
-                            <div className="grid grid-cols-7 mb-2 text-xs font-bold text-slate-400 text-center">
-                                <div className="text-red-500">日</div>
-                                <div>月</div>
-                                <div>火</div>
-                                <div>水</div>
-                                <div>木</div>
-                                <div>金</div>
-                                <div className="text-blue-500">土</div>
+                            <div className="grid grid-cols-7 text-xs font-bold text-slate-500 text-center bg-slate-50">
+                                <div className="text-red-500 py-2 border-r border-b border-slate-200">日</div>
+                                <div className="py-2 border-r border-b border-slate-200">月</div>
+                                <div className="py-2 border-r border-b border-slate-200">火</div>
+                                <div className="py-2 border-r border-b border-slate-200">水</div>
+                                <div className="py-2 border-r border-b border-slate-200">木</div>
+                                <div className="py-2 border-r border-b border-slate-200">金</div>
+                                <div className="text-blue-500 py-2 border-r border-b border-slate-200">土</div>
                             </div>
 
                             {/* 週ごとの表示 */}
                             {weeks.map((week, weekIdx) => (
-                                <div key={weekIdx} className="grid grid-cols-7 gap-1">
+                                <div key={weekIdx} className="grid grid-cols-7">
                                     {week.map((day, dayIdx) => (
                                         <div 
                                             key={dayIdx} 
                                             className={`
-                                                min-h-[85px] p-1 rounded flex flex-col items-center justify-start
-                                                ${day.isToday ? 'bg-slate-50 ring-1 ring-slate-300' : 'bg-white'}
-                                                ${day.isPast ? 'opacity-30 grayscale' : ''}
+                                                min-h-[85px] p-1 border-r border-b border-slate-200 flex flex-col items-center justify-start
+                                                ${day.isToday ? 'bg-yellow-50' : 'bg-white'}
+                                                ${day.isPast ? 'opacity-40 grayscale' : ''}
                                             `}
                                         >
                                             <span className={`text-sm font-bold mb-1.5 ${
@@ -245,14 +269,14 @@
                                                 {day.date.getDate()}
                                             </span>
                                             
-                                            {/* 複数表示に対応（カレンダー内は短縮形の label を使用） */}
                                             <div className="flex flex-col gap-1 w-full">
                                                 {day.garbageList.map((g, gIdx) => (
                                                     g.label && (
-                                                        <div key={gIdx} className={`
-                                                            w-full py-1.5 px-0.5 text-[10px] font-bold text-center leading-tight rounded-sm shadow-sm
-                                                            ${g.style}
-                                                        `}>
+                                                        <div 
+                                                            key={gIdx} 
+                                                            className="w-full py-1 px-0.5 text-[10px] font-bold text-center leading-tight rounded-md shadow-sm"
+                                                            style={getLabelStyle(g.color)}
+                                                        >
                                                             {g.label.split('\n').map((line, i) => (
                                                                 <div key={i}>{line}</div>
                                                             ))}
