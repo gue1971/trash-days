@@ -1,7 +1,9 @@
 {
   "name": "Trash Days - ゴミ出しカレンダー",
   "short_name": "Trash Days",
-  "start_url": "./index.html",
+  "id": "/trash-days/",
+  "start_url": "/trash-days/",
+  "scope": "/trash-days/",
   "display": "standalone",
   "background_color": "#222222",
   "theme_color": "#333333",
