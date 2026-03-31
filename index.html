@@ -63,24 +63,39 @@
                 NONE: { id: 'NONE', fullName: '収集なし', label: '', color: colors.none }
             };
 
-            const exceptionDates = {
-                '2025-08-06': ['NONE'], 
+            const shiftedCollectionDates = {
                 '2025-08-05': ['OTHER_PLASTIC', 'LARGE_WASTE'],
-                '2025-12-31': ['NONE'],
-                '2026-01-01': ['NONE'],
-                '2026-01-02': ['NONE'],
-                '2026-01-03': ['NONE'],
-                '2026-02-23': ['NONE'],
-                '2026-03-20': ['NONE'],
-                '2026-03-31': ['NONE'],
-                '2026-04-15': ['NONE'],
                 '2026-04-22': ['NON_BURNABLE', 'LARGE_WASTE'],
-                '2026-05-06': ['NONE'],
                 '2026-05-13': ['NON_BURNABLE', 'LARGE_WASTE'],
-                '2026-11-23': ['NONE'],
-                '2027-02-11': ['NONE'],
-                '2027-03-22': ['NONE'],
             };
+
+            const noCollectionDates = new Set([
+                '2025-08-06',
+                '2025-12-31',
+                '2026-01-01',
+                '2026-01-02',
+                '2026-01-03',
+                '2026-02-23',
+                '2026-03-20',
+                '2026-03-31',
+                '2026-04-15',
+                '2026-04-29',
+                '2026-05-06',
+                '2026-06-30',
+                '2026-09-29',
+                '2026-09-30',
+                '2026-11-23',
+                '2026-12-29',
+                '2026-12-30',
+                '2026-12-31',
+                '2027-01-01',
+                '2027-01-02',
+                '2027-01-03',
+                '2027-02-11',
+                '2027-03-22',
+                '2027-03-30',
+                '2027-03-31',
+            ]);
 
             const getNthDay = (date) => Math.floor((date.getDate() - 1) / 7) + 1;
 
@@ -91,9 +106,12 @@
                 return `${y}-${m}-${d}`;
             };
 
+            const mapGarbageKeys = (keys) => keys.map(key => garbageTypes[key]);
+
             const getGarbageList = (date) => {
                 const dateKey = formatDateKey(date);
-                if (exceptionDates[dateKey]) return exceptionDates[dateKey].map(key => garbageTypes[key]);
+                if (shiftedCollectionDates[dateKey]) return mapGarbageKeys(shiftedCollectionDates[dateKey]);
+                if (noCollectionDates.has(dateKey)) return [garbageTypes.NONE];
                 
                 const dayOfWeek = date.getDay();
                 const nth = getNthDay(date);
@@ -101,11 +119,11 @@
                 if (dayOfWeek === 1 || dayOfWeek === 4) return [garbageTypes.BURNABLE];
                 if (dayOfWeek === 5) return [garbageTypes.RECYCLE_PLASTIC];
                 if (dayOfWeek === 2) {
-                    if (nth === 1 || nth === 3 || nth === 5) return [garbageTypes.OTHER_PLASTIC];
+                    if (nth === 1 || nth === 3) return [garbageTypes.OTHER_PLASTIC];
                     if (nth === 2 || nth === 4) return [garbageTypes.RECYCLABLE_HAZARDOUS];
                 }
                 if (dayOfWeek === 3) {
-                    if (nth === 1 || nth === 3 || nth === 5) return [garbageTypes.LARGE_WASTE];
+                    if (nth === 1 || nth === 3) return [garbageTypes.LARGE_WASTE];
                     if (nth === 2 || nth === 4) return [garbageTypes.NON_BURNABLE];
                 }
                 return [garbageTypes.NONE];
