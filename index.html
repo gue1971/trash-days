@@ -17,6 +17,7 @@
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="data/schedule-data.js"></script>
 
     <style>
         * { -webkit-tap-highlight-color: transparent; }
@@ -29,19 +30,62 @@
     <script type="text/babel">
         const { useState, useEffect } = React;
 
-        const App = () => {
-            const [currentDate] = useState(new Date());
-            const [weeks, setWeeks] = useState([]);
+        const colors = {
+            burnable: '#FFFF00',
+            recycle: '#FF69B4',
+            other: '#00BFFF',
+            resource: '#90EE90',
+            nonburnable: '#FFA500',
+            large: '#008000',
+            none: '#F3F4F6',
+        };
 
-            const colors = {
-                burnable: '#FFFF00',
-                recycle: '#FF69B4',
-                other: '#00BFFF',
-                resource: '#90EE90',
-                nonburnable: '#FFA500',
-                large: '#008000',
-                none: '#F3F4F6',
-            };
+        const garbageTypes = {
+            BURNABLE: { id: 'BURNABLE', fullName: '可燃ごみ', label: '可燃\nごみ', color: colors.burnable },
+            RECYCLE_PLASTIC: { id: 'RECYCLE_PLASTIC', fullName: 'リサイクルプラ', label: 'リサイ\nプラ', color: colors.recycle },
+            OTHER_PLASTIC: { id: 'OTHER_PLASTIC', fullName: 'その他プラ', label: 'その他\nプラ', color: colors.other },
+            RECYCLABLE_HAZARDOUS: { id: 'RECYCLABLE_HAZARDOUS', fullName: '資源ごみ・有害ごみ', label: '資源\nごみ', color: colors.resource },
+            NON_BURNABLE: { id: 'NON_BURNABLE', fullName: '不燃ごみ', label: '不燃\nごみ', color: colors.nonburnable },
+            LARGE_WASTE: { id: 'LARGE_WASTE', fullName: '大型ごみ', label: '大型\nごみ', color: colors.large },
+            NONE: { id: 'NONE', fullName: '収集なし', label: '', color: colors.none }
+        };
+
+        const parseDateKey = (dateKey) => {
+            const [year, month, day] = dateKey.split('-').map(Number);
+            return new Date(year, month - 1, day);
+        };
+
+        const formatDateKey = (date) => {
+            const y = date.getFullYear();
+            const m = ('0' + (date.getMonth() + 1)).slice(-2);
+            const d = ('0' + date.getDate()).slice(-2);
+            return `${y}-${m}-${d}`;
+        };
+
+        const App = () => {
+            const [currentDate] = useState(() => new Date());
+            const [weeks, setWeeks] = useState([]);
+            const scheduleData = window.TRASH_SCHEDULE_DATA;
+
+            if (!scheduleData || !scheduleData.days || !scheduleData.dateRange) {
+                return (
+                    <div className="min-h-screen bg-white text-slate-800 flex items-center justify-center px-6">
+                        <div className="max-w-md text-center">
+                            <h1 className="text-xl font-bold mb-3">Trash Days</h1>
+                            <p className="text-sm text-slate-600">収集データが読み込めませんでした。`data/schedule-data.js` を更新してください。</p>
+                        </div>
+                    </div>
+                );
+            }
+
+            const firstAvailableDate = parseDateKey(scheduleData.dateRange.start);
+            const lastAvailableDate = parseDateKey(scheduleData.dateRange.end);
+            const displayDate = currentDate < firstAvailableDate
+                ? firstAvailableDate
+                : currentDate > lastAvailableDate
+                    ? lastAvailableDate
+                    : currentDate;
+            const showingClampedDate = formatDateKey(displayDate) !== formatDateKey(currentDate);
 
             const getTextColor = (hexColor) => {
                 if (!hexColor) return '#000000';
@@ -53,88 +97,24 @@
                 return luminance > 0.5 ? '#000000' : '#FFFFFF';
             };
 
-            const garbageTypes = {
-                BURNABLE: { id: 'BURNABLE', fullName: '可燃ごみ', label: '可燃\nごみ', color: colors.burnable },
-                RECYCLE_PLASTIC: { id: 'RECYCLE_PLASTIC', fullName: 'リサイクルプラ', label: 'リサイ\nプラ', color: colors.recycle },
-                OTHER_PLASTIC: { id: 'OTHER_PLASTIC', fullName: 'その他プラ', label: 'その他\nプラ', color: colors.other },
-                RECYCLABLE_HAZARDOUS: { id: 'RECYCLABLE_HAZARDOUS', fullName: '資源ごみ・有害ごみ', label: '資源\nごみ', color: colors.resource },
-                NON_BURNABLE: { id: 'NON_BURNABLE', fullName: '不燃ごみ', label: '不燃\nごみ', color: colors.nonburnable },
-                LARGE_WASTE: { id: 'LARGE_WASTE', fullName: '大型ごみ', label: '大型\nごみ', color: colors.large },
-                NONE: { id: 'NONE', fullName: '収集なし', label: '', color: colors.none }
-            };
-
-            const shiftedCollectionDates = {
-                '2025-08-05': ['OTHER_PLASTIC', 'LARGE_WASTE'],
-                '2026-04-22': ['NON_BURNABLE', 'LARGE_WASTE'],
-                '2026-05-13': ['NON_BURNABLE', 'LARGE_WASTE'],
-            };
-
-            const noCollectionDates = new Set([
-                '2025-08-06',
-                '2025-12-31',
-                '2026-01-01',
-                '2026-01-02',
-                '2026-01-03',
-                '2026-02-23',
-                '2026-03-20',
-                '2026-03-31',
-                '2026-04-15',
-                '2026-04-29',
-                '2026-05-06',
-                '2026-06-30',
-                '2026-09-29',
-                '2026-09-30',
-                '2026-11-23',
-                '2026-12-29',
-                '2026-12-30',
-                '2026-12-31',
-                '2027-01-01',
-                '2027-01-02',
-                '2027-01-03',
-                '2027-02-11',
-                '2027-03-22',
-                '2027-03-30',
-                '2027-03-31',
-            ]);
-
-            const getNthDay = (date) => Math.floor((date.getDate() - 1) / 7) + 1;
-
-            const formatDateKey = (date) => {
-                const y = date.getFullYear();
-                const m = ('0' + (date.getMonth() + 1)).slice(-2);
-                const d = ('0' + date.getDate()).slice(-2);
-                return `${y}-${m}-${d}`;
-            };
-
             const mapGarbageKeys = (keys) => keys.map(key => garbageTypes[key]);
 
             const getGarbageList = (date) => {
                 const dateKey = formatDateKey(date);
-                if (shiftedCollectionDates[dateKey]) return mapGarbageKeys(shiftedCollectionDates[dateKey]);
-                if (noCollectionDates.has(dateKey)) return [garbageTypes.NONE];
-                
-                const dayOfWeek = date.getDay();
-                const nth = getNthDay(date);
-
-                if (dayOfWeek === 1 || dayOfWeek === 4) return [garbageTypes.BURNABLE];
-                if (dayOfWeek === 5) return [garbageTypes.RECYCLE_PLASTIC];
-                if (dayOfWeek === 2) {
-                    if (nth === 1 || nth === 3) return [garbageTypes.OTHER_PLASTIC];
-                    if (nth === 2 || nth === 4) return [garbageTypes.RECYCLABLE_HAZARDOUS];
-                }
-                if (dayOfWeek === 3) {
-                    if (nth === 1 || nth === 3) return [garbageTypes.LARGE_WASTE];
-                    if (nth === 2 || nth === 4) return [garbageTypes.NON_BURNABLE];
-                }
-                return [garbageTypes.NONE];
+                const keys = scheduleData.days[dateKey];
+                if (!keys || keys.length === 0) return [garbageTypes.NONE];
+                return mapGarbageKeys(keys);
             };
 
             useEffect(() => {
                 const generateCalendar = () => {
-                    const startDay = new Date(currentDate);
-                    startDay.setDate(currentDate.getDate() - currentDate.getDay());
+                    const startDay = new Date(firstAvailableDate);
+                    startDay.setDate(firstAvailableDate.getDate() - firstAvailableDate.getDay());
+                    const endDay = new Date(lastAvailableDate);
+                    endDay.setDate(lastAvailableDate.getDate() + (6 - lastAvailableDate.getDay()));
+                    const totalWeeks = Math.ceil((endDay - startDay) / (7 * 24 * 60 * 60 * 1000));
                     const tempWeeks = [];
-                    for (let w = 0; w < 60; w++) {
+                    for (let w = 0; w <= totalWeeks; w++) {
                         const days = [];
                         for (let d = 0; d < 7; d++) {
                             const targetDate = new Date(startDay);
@@ -143,6 +123,7 @@
                                 date: targetDate,
                                 isToday: targetDate.toDateString() === currentDate.toDateString(),
                                 isPast: targetDate < new Date(new Date(currentDate).setHours(0,0,0,0)),
+                                isInRange: targetDate >= firstAvailableDate && targetDate <= lastAvailableDate,
                                 garbageList: getGarbageList(targetDate)
                             });
                         }
@@ -151,7 +132,7 @@
                     setWeeks(tempWeeks);
                 };
                 generateCalendar();
-            }, [currentDate]);
+            }, [currentDate, scheduleData]);
 
             const getHeaderDateString = (date) => {
                 const m = date.getMonth() + 1;
@@ -161,14 +142,17 @@
             };
 
             const threeDaysData = [0, 1, 2].map(offset => {
-                const d = new Date(currentDate);
-                d.setDate(currentDate.getDate() + offset);
+                const d = new Date(displayDate);
+                d.setDate(displayDate.getDate() + offset);
+                if (d > lastAvailableDate) {
+                    return null;
+                }
                 return {
                     date: d,
                     dateString: getHeaderDateString(d),
                     garbageList: getGarbageList(d)
                 };
-            });
+            }).filter(Boolean);
 
             const getLabelStyle = (color) => ({
                 backgroundColor: color,
@@ -187,6 +171,16 @@
             return (
                 <div className="min-h-screen bg-white font-sans text-slate-800 flex flex-col">
                     <div className="px-4 pt-8 pb-4 max-w-md mx-auto w-full">
+                        <div className="mb-4">
+                            <div className="text-xs font-bold tracking-wide text-slate-500">{scheduleData.fiscalYear.japaneseLabel}</div>
+                            <div className="text-sm text-slate-700">{scheduleData.area.name}</div>
+                            <div className="text-xs text-slate-500">{scheduleData.area.district}</div>
+                            {showingClampedDate && (
+                                <div className="mt-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-2 py-1">
+                                    今日の日付はデータ範囲外のため、{getHeaderDateString(displayDate)} から表示しています。
+                                </div>
+                            )}
+                        </div>
                         
                         {/* 直近3日間のリスト */}
                         <div className="mb-6 pb-4 border-b border-slate-200">
@@ -239,6 +233,7 @@
                                                     min-h-[85px] p-1 flex flex-col items-center justify-start relative border-r border-b border-slate-200
                                                     ${bgClass}
                                                     ${day.isPast ? 'opacity-40 grayscale' : ''}
+                                                    ${day.isInRange ? '' : 'opacity-20'}
                                                 `}
                                             >
                                                 {/* 日付表示：高さ固定のコンテナで囲ってズレを防止 */}
