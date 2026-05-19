@@ -28,7 +28,7 @@
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect } = React;
+        const { useState, useEffect, useRef } = React;
 
         const colors = {
             burnable: '#FFFF00',
@@ -65,6 +65,9 @@
         const App = () => {
             const [currentDate] = useState(() => new Date());
             const [weeks, setWeeks] = useState([]);
+            const calendarScrollRef = useRef(null);
+            const targetWeekRef = useRef(null);
+            const weekdayHeaderRef = useRef(null);
             const scheduleData = window.TRASH_SCHEDULE_DATA;
 
             if (!scheduleData || !scheduleData.days || !scheduleData.dateRange) {
@@ -122,6 +125,7 @@
                                 isToday: targetDate.toDateString() === currentDate.toDateString(),
                                 isPast: targetDate < new Date(new Date(currentDate).setHours(0,0,0,0)),
                                 isInRange: targetDate >= firstAvailableDate && targetDate <= lastAvailableDate,
+                                isDisplayDate: targetDate.toDateString() === displayDate.toDateString(),
                                 garbageList: getGarbageList(targetDate)
                             });
                         }
@@ -131,6 +135,15 @@
                 };
                 generateCalendar();
             }, [currentDate, scheduleData]);
+
+            useEffect(() => {
+                if (!calendarScrollRef.current || !targetWeekRef.current) return;
+                const weekdayHeaderHeight = weekdayHeaderRef.current?.offsetHeight || 0;
+                calendarScrollRef.current.scrollTop = Math.max(
+                    targetWeekRef.current.offsetTop - weekdayHeaderHeight,
+                    0
+                );
+            }, [weeks]);
 
             const getHeaderDateString = (date) => {
                 const m = date.getMonth() + 1;
@@ -167,10 +180,10 @@
             };
 
             return (
-                <div className="min-h-screen bg-white font-sans text-slate-800 flex flex-col">
-                    <div className="px-4 pt-8 pb-4 max-w-md mx-auto w-full">
+                <div className="h-screen bg-white font-sans text-slate-800 flex flex-col overflow-hidden">
+                    <div className="flex-none px-4 pt-8 max-w-md mx-auto w-full bg-white z-30">
                         {/* 直近3日間のリスト */}
-                        <div className="mb-6 pb-4 border-b border-slate-200">
+                        <div className="pb-4 border-b border-slate-200">
                             <div className="flex flex-col gap-3">
                                 {threeDaysData.map((data, idx) => (
                                     <div key={idx} className="flex items-center gap-4 min-h-[2rem]">
@@ -192,10 +205,12 @@
                                 ))}
                             </div>
                         </div>
+                    </div>
 
+                    <div ref={calendarScrollRef} className="flex-1 overflow-y-auto px-4 pb-4 max-w-md mx-auto w-full">
                         {/* カレンダー */}
                         <div className="relative border-l border-t border-slate-200">
-                            <div className="sticky top-0 z-20 grid grid-cols-7 text-xs font-bold text-slate-500 text-center bg-slate-50 shadow-sm border-b border-slate-200">
+                            <div ref={weekdayHeaderRef} className="sticky top-0 z-20 grid grid-cols-7 text-xs font-bold text-slate-500 text-center bg-slate-50 shadow-sm border-b border-slate-200">
                                 <div className="text-red-500 py-2 border-r border-slate-200">日</div>
                                 <div className="py-2 border-r border-slate-200">月</div>
                                 <div className="py-2 border-r border-slate-200">火</div>
@@ -206,8 +221,10 @@
                             </div>
 
                             {/* 週ごとの表示 */}
-                            {weeks.map((week, weekIdx) => (
-                                <div key={weekIdx} className="grid grid-cols-7">
+                            {weeks.map((week, weekIdx) => {
+                                const isTargetWeek = week.some(day => day.isDisplayDate);
+                                return (
+                                <div key={weekIdx} ref={isTargetWeek ? targetWeekRef : null} className="grid grid-cols-7">
                                     {week.map((day, dayIdx) => {
                                         const isFirstDay = day.date.getDate() === 1;
                                         // 背景色クラスを取得
@@ -259,7 +276,7 @@
                                         );
                                     })}
                                 </div>
-                            ))}
+                            )})}
                         </div>
                     </div>
                 </div>
